@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MNnews 週報精選工具</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',-apple-system,Helvetica,Arial,sans-serif;background:#f7f7f5;color:#1a1a1a;line-height:1.6;font-size:15px}
+a{color:#06c;text-decoration:none}
+a:hover{text-decoration:underline}
+
+.topbar{background:#1a1a1a;color:#fff;padding:18px 24px;border-bottom:3px solid #000}
+.topbar h1{font-size:18px;font-weight:700;letter-spacing:.5px}
+.topbar .meta{font-size:12px;color:#bbb;margin-top:4px}
+
+.app{max-width:880px;margin:0 auto;padding:24px 20px 100px}
+
+.source-bar{background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:12px 16px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:13px}
+.source-bar .status{flex:1;min-width:180px;color:#444}
+.source-bar .status strong{color:#1a1a1a}
+.source-bar .status.warn{color:#a85a00}
+.source-bar .status.err{color:#a01d1d}
+.source-bar input[type=file]{display:none}
+.btn-link{font-family:inherit;font-size:13px;font-weight:600;padding:6px 12px;border:1px solid #d0d0d0;border-radius:4px;background:#fff;color:#1a1a1a;cursor:pointer;transition:all .12s}
+.btn-link:hover{border-color:#1a1a1a;background:#fafafa}
+
+.controls{background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:14px 18px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.controls label{font-size:13px;color:#444;font-weight:500;display:flex;align-items:center;gap:6px}
+.controls select{font-family:inherit;font-size:13px;padding:6px 10px;border:1px solid #d0d0d0;border-radius:4px;background:#fff}
+.counter{margin-left:auto;font-size:13px;color:#666;font-weight:500}
+.counter strong{color:#1a1a1a;font-weight:700;font-size:15px}
+
+.item-list{display:flex;flex-direction:column;gap:8px}
+.item{background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:14px 16px;display:flex;gap:12px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.item:hover{border-color:#999}
+.item.checked{border-color:#1a1a1a;background:#fafaf8;box-shadow:0 1px 0 #1a1a1a}
+.item input[type=checkbox]{margin-top:4px;width:16px;height:16px;flex-shrink:0;accent-color:#1a1a1a;cursor:pointer}
+.item .body{flex:1;min-width:0}
+.item .head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:11.5px;color:#888;margin-bottom:5px}
+.item .head .date{font-variant-numeric:tabular-nums}
+.item .head .score{font-weight:700;color:#666;background:#f0f0f0;padding:1px 6px;border-radius:3px}
+.item .head .src-cnt{color:#888}
+.item .head .tag{background:#eef2f7;color:#3d6ba8;padding:1px 6px;border-radius:3px;font-weight:500}
+.item .title{font-size:15.5px;font-weight:600;color:#0a0a0a;line-height:1.4;margin-bottom:5px}
+.item.checked .title{color:#000}
+.item .preview{font-size:13px;color:#666;line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+.empty{text-align:center;padding:60px 20px;color:#888;font-size:14px}
+
+.action-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #ccc;padding:14px 20px;z-index:10;box-shadow:0 -4px 10px rgba(0,0,0,.05)}
+.action-bar-inner{max-width:880px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.action-bar .hint{font-size:13px;color:#666}
+.btn{font-family:inherit;font-size:14px;font-weight:600;padding:10px 20px;border:1px solid #1a1a1a;border-radius:4px;background:#1a1a1a;color:#fff;cursor:pointer;transition:opacity .12s}
+.btn:hover:not(:disabled){opacity:.85}
+.btn:disabled{background:#ccc;border-color:#ccc;cursor:not-allowed}
+.btn.btn-secondary{background:#fff;color:#1a1a1a}
+
+.preview-overlay{position:fixed;inset:0;background:#fff;z-index:100;display:flex;flex-direction:column}
+.preview-overlay.hidden{display:none}
+.preview-header{padding:12px 20px;background:#1a1a1a;color:#fff;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.preview-header .title{font-size:14px;font-weight:600;flex:1;min-width:160px}
+.preview-header .btn{padding:7px 14px;font-size:13px}
+.preview-header .btn-close{background:transparent;border:1px solid #555;color:#fff}
+.preview-header .btn-close:hover{background:#333}
+.preview-frame{flex:1;width:100%;border:none;background:#fff}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:4px;font-size:13px;z-index:200;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>MNnews 週報精選工具</h1>
+  <div class="meta">勾選想收錄的條目 → 產出週報 → 下載 HTML / 複製 Markdown</div>
+</header>
+
+<div class="app">
+
+  <div class="source-bar">
+    <div class="status" id="sourceStatus">正在嘗試從同目錄載入 feed.json⋯</div>
+    <button class="btn-link" id="uploadBtn">從電腦選擇 feed.json</button>
+    <input type="file" id="feedFile" accept=".json,application/json">
+  </div>
+
+  <div class="controls">
+    <label>時間範圍
+      <select id="rangeSelect">
+        <option value="7">過去 7 天</option>
+        <option value="14" selected>過去 14 天</option>
+        <option value="30">過去 30 天</option>
+        <option value="all">全部</option>
+      </select>
+    </label>
+    <label>排序
+      <select id="sortSelect">
+        <option value="date">日期（新到舊）</option>
+        <option value="score">重要性（高到低）</option>
+      </select>
+    </label>
+    <div class="counter">已選 <strong id="selectedCount">0</strong> 則</div>
+  </div>
+
+  <div class="item-list" id="itemList">
+    <div class="empty">載入中⋯</div>
+  </div>
+</div>
+
+<div class="action-bar">
+  <div class="action-bar-inner">
+    <div class="hint" id="actionHint">建議勾選 5 則</div>
+    <button class="btn" id="generateBtn" disabled>產出週報</button>
+  </div>
+</div>
+
+<div class="preview-overlay hidden" id="previewOverlay">
+  <div class="preview-header">
+    <div class="title" id="previewTitle">週報預覽</div>
+    <button class="btn" id="downloadHtmlBtn">下載 HTML</button>
+    <button class="btn btn-secondary" id="copyHtmlBtn">複製 HTML</button>
+    <button class="btn btn-secondary" id="copyMdBtn">複製 Markdown</button>
+    <button class="btn btn-close" id="closePreviewBtn">關閉</button>
+  </div>
+  <iframe class="preview-frame" id="previewFrame"></iframe>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const state = {
+  items: [],
+  filtered: [],
+  selectedIds: new Set(),
+  generatedHtml: '',
+  generatedMd: '',
+  source: '', // 'fetch' or 'upload' or ''
+};
+
+const els = {
+  status: document.getElementById('sourceStatus'),
+  uploadBtn: document.getElementById('uploadBtn'),
+  feedFile: document.getElementById('feedFile'),
+  list: document.getElementById('itemList'),
+  range: document.getElementById('rangeSelect'),
+  sort: document.getElementById('sortSelect'),
+  count: document.getElementById('selectedCount'),
+  hint: document.getElementById('actionHint'),
+  genBtn: document.getElementById('generateBtn'),
+  overlay: document.getElementById('previewOverlay'),
+  frame: document.getElementById('previewFrame'),
+  previewTitle: document.getElementById('previewTitle'),
+  downloadHtmlBtn: document.getElementById('downloadHtmlBtn'),
+  copyHtmlBtn: document.getElementById('copyHtmlBtn'),
+  copyMdBtn: document.getElementById('copyMdBtn'),
+  closeBtn: document.getElementById('closePreviewBtn'),
+  toast: document.getElementById('toast'),
+};
+
+// ---------- Loading feed.json ----------
+async function tryAutoLoad(){
+  try{
+    const res = await fetch('feed.json', {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    acceptFeed(data, 'fetch');
+  }catch(err){
+    state.source = '';
+    const isFile = window.location.protocol === 'file:';
+    const tip = isFile
+      ? '（用 file:// 直接開啟時瀏覽器會擋下 fetch，請從右側按鈕手動選 feed.json）'
+      : '（請從右側按鈕手動選擇 feed.json）';
+    setStatus('warn', '無法自動載入 feed.json' + tip);
+  }
+}
+
+els.uploadBtn.addEventListener('click', () => els.feedFile.click());
+els.feedFile.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try{
+      const data = JSON.parse(ev.target.result);
+      acceptFeed(data, 'upload', file.name);
+    }catch(err){
+      setStatus('err', 'JSON 解析失敗：' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = ''; // allow re-uploading same filename
+});
+
+function acceptFeed(data, source, filename){
+  if(!data || !Array.isArray(data.items)){
+    setStatus('err', 'feed.json 結構不對：缺少 items 陣列');
+    return;
+  }
+  const items = data.items.filter(it => it && it.id && it.title);
+  if(!items.length){
+    setStatus('err', 'feed.json 裡沒有可用的條目');
+    return;
+  }
+  state.items = items;
+  state.source = source;
+  const updated = data.lastUpdated || '';
+  const label = source === 'fetch'
+    ? `已從伺服器載入 feed.json（<strong>${items.length}</strong> 則${updated ? '，更新於 ' + escHtml(updated.slice(0,10)) : ''}）`
+    : `已上傳 ${escHtml(filename || 'feed.json')}（<strong>${items.length}</strong> 則${updated ? '，更新於 ' + escHtml(updated.slice(0,10)) : ''}）`;
+  setStatus('ok', label);
+  applyFilters();
+}
+
+function setStatus(level, html){
+  els.status.className = 'status' + (level === 'warn' ? ' warn' : level === 'err' ? ' err' : '');
+  els.status.innerHTML = html;
+}
+
+// ---------- Filtering ----------
+function applyFilters(){
+  const range = els.range.value;
+  const sort = els.sort.value;
+
+  let filtered = state.items.slice();
+  if(range !== 'all'){
+    const days = parseInt(range, 10);
+    const now = new Date();
+    const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days);
+    filtered = filtered.filter(it => {
+      if(!it.date) return false;
+      const d = parseDate(it.date);
+      return d && d >= cutoff;
+    });
+  }
+  if(sort === 'score'){
+    filtered.sort((a,b) => (b.importance_score||0) - (a.importance_score||0));
+  } else {
+    filtered.sort((a,b) => {
+      const da = parseDate(a.date), db = parseDate(b.date);
+      if(!da && !db) return 0;
+      if(!da) return 1;
+      if(!db) return -1;
+      return db - da;
+    });
+  }
+  state.filtered = filtered;
+  renderList();
+}
+
+function parseDate(str){
+  if(!str) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(str);
+  if(!m) return null;
+  return new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
+}
+
+// ---------- Picker rendering ----------
+function renderList(){
+  if(!state.items.length){
+    els.list.innerHTML = '';
+    return;
+  }
+  if(!state.filtered.length){
+    els.list.innerHTML = '<div class="empty">這個範圍內沒有條目。</div>';
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  state.filtered.forEach(item => frag.appendChild(renderItem(item)));
+  els.list.innerHTML = '';
+  els.list.appendChild(frag);
+}
+
+function renderItem(item){
+  const row = document.createElement('label');
+  row.className = 'item' + (state.selectedIds.has(item.id) ? ' checked' : '');
+  row.dataset.id = item.id;
+
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = state.selectedIds.has(item.id);
+  cb.addEventListener('change', () => toggleSelect(item.id, cb.checked, row));
+
+  const body = document.createElement('div');
+  body.className = 'body';
+
+  const head = document.createElement('div');
+  head.className = 'head';
+  const dateSpan = document.createElement('span');
+  dateSpan.className = 'date';
+  dateSpan.textContent = item.date || '—';
+  head.appendChild(dateSpan);
+  if(typeof item.importance_score === 'number'){
+    const sc = document.createElement('span');
+    sc.className = 'score';
+    sc.textContent = item.importance_score + ' 分';
+    head.appendChild(sc);
+  }
+  const srcCnt = item.source_count || (item.sources ? item.sources.length : 0);
+  if(srcCnt){
+    const sp = document.createElement('span');
+    sp.className = 'src-cnt';
+    sp.textContent = srcCnt + ' 個來源';
+    head.appendChild(sp);
+  }
+  if(item.tags && item.tags.length){
+    item.tags.slice(0,3).forEach(t => {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = t;
+      head.appendChild(tag);
+    });
+  }
+
+  const title = document.createElement('div');
+  title.className = 'title';
+  title.textContent = item.title;
+
+  const preview = document.createElement('div');
+  preview.className = 'preview';
+  preview.textContent = stripHtml(item.summary || '').slice(0, 140);
+
+  body.appendChild(head);
+  body.appendChild(title);
+  if(preview.textContent) body.appendChild(preview);
+
+  row.appendChild(cb);
+  row.appendChild(body);
+  return row;
+}
+
+function stripHtml(html){
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html || '';
+  return (tmp.textContent || '').replace(/\s+/g,' ').trim();
+}
+
+function toggleSelect(id, checked, rowEl){
+  if(checked) state.selectedIds.add(id);
+  else state.selectedIds.delete(id);
+  if(rowEl) rowEl.classList.toggle('checked', checked);
+  updateCounter();
+}
+
+function updateCounter(){
+  const n = state.selectedIds.size;
+  els.count.textContent = n;
+  els.genBtn.disabled = n === 0;
+  if(n === 0) els.hint.textContent = '建議勾選 5 則';
+  else if(n < 5) els.hint.textContent = `已選 ${n} 則（建議 5 則）`;
+  else if(n === 5) els.hint.textContent = '✓ 已選滿 5 則';
+  else els.hint.textContent = `已選 ${n} 則（超過建議的 5 則）`;
+}
+
+els.range.addEventListener('change', applyFilters);
+els.sort.addEventListener('change', applyFilters);
+
+// ---------- Date range helper ----------
+function deriveDateRange(items){
+  const dates = items.map(i => i.date).filter(Boolean).sort();
+  if(!dates.length) return '';
+  const a = dates[0].replace(/-/g,'/');
+  const b = dates[dates.length-1].replace(/-/g,'/');
+  return a === b ? a : `${a} – ${b}`;
+}
+
+// ---------- Discussion / Source cleaning ----------
+// Strip leading stance-tag prefix like <strong>標籤</strong>： or <span class="discuss-tag">…</span>：
+function stripStanceTagPrefix(liInner){
+  let s = liInner;
+  // remove leading <span class="discuss-tag*">…</span> + optional colon/space
+  s = s.replace(/^\s*<span\b[^>]*class\s*=\s*['"][^'"]*discuss-tag[^'"]*['"][^>]*>[\s\S]*?<\/span>\s*[:：]?\s*/i, '');
+  // remove leading <strong …>…</strong> + optional colon/space (used for stance/source labels)
+  s = s.replace(/^\s*<strong\b[^>]*>[\s\S]*?<\/strong>\s*[:：]?\s*/i, '');
+  return s.trim();
+}
+
+function getDiscussionLis(rawHtml){
+  const out = [];
+  const re = /<li>([\s\S]*?)<\/li>/g;
+  let m;
+  while((m = re.exec(rawHtml || '')) !== null){
+    if(/<a\s[^>]*href=/i.test(m[1])){
+      out.push(stripStanceTagPrefix(m[1]));
+    }
+  }
+  return out;
+}
+
+function htmlToPlainPreservingLinks(html){
+  // Convert <a href="X">Y</a> to placeholder, strip remaining tags, restore as Markdown link
+  const links = [];
+  let s = html.replace(/<a\b[^>]*href\s*=\s*['"]([^'"]+)['"][^>]*>([\s\S]*?)<\/a>/gi, (_, url, txt) => {
+    links.push({ url, txt: txt.replace(/<[^>]+>/g,'').trim() });
+    return ` L${links.length-1} `;
+  });
+  s = s.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>\s*<p>/gi, '\n\n');
+  s = s.replace(/<[^>]+>/g, '');
+  s = s.replace(/&nbsp;/g, ' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+  s = s.replace(/ L(\d+) /g, (_,i) => {
+    const l = links[parseInt(i,10)];
+    return `[${l.txt}](${l.url})`;
+  });
+  return s.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g,'\n\n').trim();
+}
+
+function summaryToParagraphs(html){
+  // Returns array of paragraph strings (markdown-friendly, links preserved)
+  const paras = [];
+  const re = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+  let m;
+  while((m = re.exec(html || '')) !== null){
+    const txt = htmlToPlainPreservingLinks(m[1]);
+    if(txt) paras.push(txt);
+  }
+  if(!paras.length){
+    const txt = htmlToPlainPreservingLinks(html || '');
+    if(txt) paras.push(txt);
+  }
+  return paras;
+}
+
+// ---------- Generate ----------
+els.genBtn.addEventListener('click', () => {
+  const selected = state.items.filter(it => state.selectedIds.has(it.id));
+  if(!selected.length) return;
+  // Order: newest first
+  selected.sort((a,b) => {
+    const da = parseDate(a.date), db = parseDate(b.date);
+    if(!da && !db) return 0;
+    if(!da) return 1;
+    if(!db) return -1;
+    return db - da;
+  });
+  state.generatedHtml = buildWeeklyHtml(selected);
+  state.generatedMd = buildWeeklyMarkdown(selected);
+  showPreview(state.generatedHtml, deriveDateRange(selected));
+});
+
+// ---------- HTML output (matches user's published prose format) ----------
+function buildWeeklyHtml(items){
+  const dateRange = deriveDateRange(items);
+  const titleText = `MNnews 精選週報${dateRange ? ' · ' + dateRange : ''}`;
+
+  const tocHtml = `
+<section class="toc">
+  <h2>本期內容</h2>
+  <ul>
+${items.map((it, i) => `    <li><a href="#story-${i+1}">${escHtml(it.title)}</a></li>`).join('\n')}
+  </ul>
+</section>`;
+
+  const articlesHtml = items.map((it, i) => {
+    const sources = (it.sources || []).map(s => {
+      const nm = (s.name || '').replace(/\s*[（(][^()（）]*[)）]\s*$/,'').trim();
+      return s.url
+        ? `<a href="${escHtml(s.url)}" target="_blank" rel="noopener">${escHtml(nm)}</a>`
+        : escHtml(nm);
+    }).join('、');
+    const sourcesP = sources ? `  <p class="sources">來源：${sources}</p>` : '';
+
+    const summaryHtml = it.summary
+      ? `  <div class="summary">${it.summary}</div>`
+      : '';
+
+    const lis = getDiscussionLis(it.discussions);
+    const discHtml = lis.length
+      ? `  <ul class="discussions">\n${lis.map(li => `    <li>${li}</li>`).join('\n')}\n  </ul>`
+      : '';
+
+    const titleA = it.url
+      ? `<a href="${escHtml(it.url)}" target="_blank" rel="noopener">${escHtml(it.title)}</a>`
+      : escHtml(it.title);
+
+    return `
+<article class="story" id="story-${i+1}">
+  <h2>${titleA}</h2>
+${[sourcesP, summaryHtml, discHtml].filter(Boolean).join('\n')}
+</article>`;
+  }).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escHtml(titleText)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',-apple-system,Helvetica,Arial,sans-serif;background:#fff;color:#1a1a1a;line-height:1.78;font-size:16px}
+a{color:#06c;text-decoration:none}a:hover{color:#0044aa;text-decoration:underline}
+
+.wrap{max-width:720px;margin:0 auto;padding:40px 22px 80px}
+
+header.masthead{margin-bottom:28px;padding-bottom:16px;border-bottom:2px solid #1a1a1a}
+header.masthead h1{font-size:22px;font-weight:700;color:#0a0a0a;letter-spacing:.3px}
+header.masthead .issue{margin-top:6px;font-size:13px;color:#666;font-variant-numeric:tabular-nums}
+
+.toc{margin-bottom:36px}
+.toc h2{font-size:15px;font-weight:700;color:#0a0a0a;margin-bottom:10px;letter-spacing:.3px}
+.toc ul{list-style:none;padding:0}
+.toc li{padding:5px 0;font-size:15.5px;line-height:1.6;color:#333;border-bottom:1px dashed #eee}
+.toc li:last-child{border-bottom:none}
+.toc li a{color:#1a1a1a;text-decoration:none}
+.toc li a:hover{color:#06c;text-decoration:underline}
+.toc li::before{content:"·";color:#aaa;margin-right:8px}
+
+.story{margin-bottom:44px;padding-top:8px;scroll-margin-top:20px}
+.story h2{font-size:23px;font-weight:700;line-height:1.4;color:#0a0a0a;margin-bottom:10px;letter-spacing:-.005em}
+.story h2 a{color:inherit;text-decoration:none}
+.story h2 a:hover{color:#06c}
+
+.story .sources{font-size:14.5px;color:#555;line-height:1.7;margin-bottom:16px}
+.story .sources a{color:#06c;font-weight:500}
+
+.story .summary{font-size:16px;line-height:1.85;color:#222;margin-bottom:18px}
+.story .summary p{margin-bottom:14px;text-align:justify}
+.story .summary p:last-child{margin-bottom:0}
+
+.story .discussions{list-style:none;padding:0;margin:0}
+.story .discussions li{padding:8px 0 8px 16px;font-size:14.5px;line-height:1.75;color:#333;border-bottom:1px dashed #eee;position:relative}
+.story .discussions li:last-child{border-bottom:none}
+.story .discussions li::before{content:"·";position:absolute;left:0;top:8px;color:#aaa;font-weight:700}
+.story .discussions li a{color:#06c}
+.story .discussions li a:hover{text-decoration:underline}
+
+footer.foot{margin-top:48px;padding-top:18px;border-top:1px solid #ccc;font-size:12.5px;color:#888;line-height:1.7}
+footer.foot a{color:#06c}
+footer.foot .disclaimer{margin-top:6px;color:#aaa;font-size:11.5px}
+
+@media (max-width:560px){
+  .wrap{padding:28px 16px 64px}
+  header.masthead h1{font-size:19px}
+  .story h2{font-size:20px}
+  .story .summary{font-size:15.5px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <h1>MNnews 精選週報</h1>
+    ${dateRange ? `<div class="issue">${escHtml(dateRange)}</div>` : ''}
+  </header>
+${tocHtml}
+${articlesHtml}
+  <footer class="foot">
+    <div>本期共 ${items.length} 則 · 完整版見 <a href="https://astrohsu.github.io/MNnews/">MNnews</a></div>
+    <div class="disclaimer">本內容僅供個人閱讀參考，不構成投資建議。</div>
+  </footer>
+</div>
+</body>
+</html>`;
+}
+
+// ---------- Markdown output ----------
+function buildWeeklyMarkdown(items){
+  const dateRange = deriveDateRange(items);
+  const lines = [];
+  lines.push(`# MNnews 精選週報${dateRange ? ' · ' + dateRange : ''}`);
+  lines.push('');
+  lines.push('## 本期內容');
+  lines.push('');
+  items.forEach(it => lines.push(`* ${it.title}`));
+  lines.push('');
+
+  items.forEach(it => {
+    lines.push('---');
+    lines.push('');
+    lines.push(`## ${it.title}`);
+    lines.push('');
+    const sources = (it.sources || []).map(s => {
+      const nm = (s.name || '').replace(/\s*[（(][^()（）]*[)）]\s*$/,'').trim();
+      return s.url ? `[${nm}](${s.url})` : nm;
+    }).join('、');
+    if(sources){
+      lines.push(`來源：${sources}`);
+      lines.push('');
+    }
+    summaryToParagraphs(it.summary || '').forEach(p => {
+      lines.push(p);
+      lines.push('');
+    });
+    const discLis = getDiscussionLis(it.discussions);
+    if(discLis.length){
+      discLis.forEach(li => {
+        lines.push(`* ${htmlToPlainPreservingLinks(li)}`);
+      });
+      lines.push('');
+    }
+  });
+
+  return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim() + '\n';
+}
+
+function escHtml(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ---------- Preview ----------
+function showPreview(html, label){
+  els.previewTitle.textContent = '週報預覽' + (label ? ' · ' + label : '');
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const old = els.frame.dataset.blobUrl;
+  if(old) URL.revokeObjectURL(old);
+  els.frame.dataset.blobUrl = url;
+  els.frame.src = url;
+  els.overlay.classList.remove('hidden');
+}
+
+els.closeBtn.addEventListener('click', () => {
+  els.overlay.classList.add('hidden');
+  const old = els.frame.dataset.blobUrl;
+  if(old){ URL.revokeObjectURL(old); els.frame.removeAttribute('src'); delete els.frame.dataset.blobUrl; }
+});
+
+// ---------- Download / Copy ----------
+function dateStamp(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+els.downloadHtmlBtn.addEventListener('click', () => {
+  if(!state.generatedHtml) return;
+  const filename = `mnnews-weekly-${dateStamp()}.html`;
+  const blob = new Blob([state.generatedHtml], {type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+  toast('已下載 ' + filename);
+});
+
+els.copyHtmlBtn.addEventListener('click', () => copyToClipboard(state.generatedHtml, 'HTML 已複製到剪貼簿'));
+els.copyMdBtn.addEventListener('click', () => copyToClipboard(state.generatedMd, 'Markdown 已複製到剪貼簿'));
+
+async function copyToClipboard(text, msg){
+  if(!text) return;
+  try{
+    await navigator.clipboard.writeText(text);
+    toast(msg);
+  }catch(err){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); toast(msg); }
+    catch(e2){ toast('複製失敗，請手動下載'); }
+    document.body.removeChild(ta);
+  }
+}
+
+function toast(msg){
+  els.toast.textContent = msg;
+  els.toast.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => els.toast.classList.remove('show'), 2200);
+}
+
+// ---------- Init ----------
+tryAutoLoad();
+</script>
+</body>
+</html>
