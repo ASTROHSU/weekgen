@@ -478,7 +478,7 @@ ${items.map((it, i) => `    <li><a href="#story-${i+1}">${escHtml(it.title)}</a>
   <h2>${titleA}</h2>
 ${[sourcesP, summaryHtml, discHtml].filter(Boolean).join('\n')}
 </article>`;
-  }).join('\n');
+  }).join('\n<hr class="story-divider">\n');
 
   return `<!DOCTYPE html>
 <html lang="zh-TW">
@@ -509,7 +509,8 @@ header.masthead .issue{margin-top:6px;font-size:13px;color:#666;font-variant-num
 .toc li a:hover{color:#06c;text-decoration:underline}
 .toc li::before{content:"·";color:#aaa;margin-right:8px}
 
-.story{margin-bottom:44px;padding-top:8px;scroll-margin-top:20px}
+.story{margin:0 0 36px;padding-top:8px;scroll-margin-top:20px}
+.story-divider{border:none;border-top:1px solid #d0d0d0;margin:0 0 36px}
 .story h2{font-size:23px;font-weight:700;line-height:1.4;color:#0a0a0a;margin-bottom:10px;letter-spacing:-.005em}
 .story h2 a{color:inherit;text-decoration:none}
 .story h2 a:hover{color:#06c}
