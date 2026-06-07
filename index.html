@@ -48,6 +48,12 @@ a:hover{text-decoration:underline}
 .item .title{font-size:15.5px;font-weight:600;color:#0a0a0a;line-height:1.4;margin-bottom:5px}
 .item.checked .title{color:#000}
 .item .preview{font-size:13px;color:#666;line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.item .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.item .mini-btn{font-family:inherit;font-size:12px;font-weight:600;padding:5px 9px;border:1px solid #d0d0d0;border-radius:4px;background:#fff;color:#333;cursor:pointer;transition:all .12s}
+.item .mini-btn:hover{border-color:#1a1a1a;background:#fafafa}
+.item .prompt-panel{display:none;margin-top:9px}
+.item .prompt-panel.open{display:block}
+.item .prompt-panel textarea{width:100%;min-height:180px;padding:10px 11px;border:1px solid #d8d8d8;border-radius:5px;background:#fbfbfa;color:#222;font-family:'Noto Sans TC',-apple-system,Helvetica,Arial,sans-serif;font-size:12.5px;line-height:1.65;resize:vertical}
 
 .empty{text-align:center;padding:60px 20px;color:#888;font-size:14px}
 
@@ -75,7 +81,7 @@ a:hover{text-decoration:underline}
 
 <header class="topbar">
   <h1>MNnews 週報精選工具</h1>
-  <div class="meta">勾選想收錄的條目 → 產出週報 → 下載 HTML / 複製 Markdown</div>
+  <div class="meta">勾選想收錄的條目 → 每則可複製圖表 Prompt → 產出週報 → 下載 HTML / 複製 Markdown</div>
 </header>
 
 <div class="app">
@@ -321,9 +327,52 @@ function renderItem(item){
   preview.className = 'preview';
   preview.textContent = stripHtml(item.summary || '').slice(0, 140);
 
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+
+  const copyPromptBtn = document.createElement('button');
+  copyPromptBtn.type = 'button';
+  copyPromptBtn.className = 'mini-btn';
+  copyPromptBtn.textContent = '複製圖表 Prompt';
+  copyPromptBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    copyToClipboard(buildChartPrompt(item), '這則新聞的圖表 Prompt 已複製');
+  });
+
+  const togglePromptBtn = document.createElement('button');
+  togglePromptBtn.type = 'button';
+  togglePromptBtn.className = 'mini-btn';
+  togglePromptBtn.textContent = '展開 Prompt';
+
+  const promptPanel = document.createElement('div');
+  promptPanel.className = 'prompt-panel';
+  const promptTextarea = document.createElement('textarea');
+  promptTextarea.readOnly = true;
+  promptTextarea.value = buildChartPrompt(item);
+  promptTextarea.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    promptTextarea.select();
+  });
+  promptPanel.appendChild(promptTextarea);
+
+  togglePromptBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const open = promptPanel.classList.toggle('open');
+    togglePromptBtn.textContent = open ? '收合 Prompt' : '展開 Prompt';
+    if(open) promptTextarea.focus();
+  });
+
+  actions.appendChild(copyPromptBtn);
+  actions.appendChild(togglePromptBtn);
+
   body.appendChild(head);
   body.appendChild(title);
   if(preview.textContent) body.appendChild(preview);
+  body.appendChild(actions);
+  body.appendChild(promptPanel);
 
   row.appendChild(cb);
   row.appendChild(body);
@@ -419,6 +468,117 @@ function summaryToParagraphs(html){
     if(txt) paras.push(txt);
   }
   return paras;
+}
+
+// ---------- Per-story Claude chart prompt ----------
+function buildChartPrompt(item){
+  const title = item.title || '未命名新聞';
+  const tags = (item.tags || []).join('、') || '未標示';
+  const summaryText = summaryToParagraphs(item.summary || '').join('\n\n') || '未提供摘要';
+  const sourcesText = sourcesToPromptText(item.sources || []);
+  const discussionsText = discussionsToPromptText(item.discussions);
+  const preferredAngle = inferPreferredAngle(item);
+
+  return `請根據以下新聞，製作一張幫助讀者理解事件意義的圖表。
+
+請先判斷這則新聞最適合用哪一種資訊結構來解釋，不要只重述新聞內容。目標是讓讀者看懂：
+1. 這件事發生前，原本的狀態是什麼？
+2. 這次新聞真正改變了什麼？
+3. 牽涉哪些關鍵角色、技術層、制度或資金流？
+4. 現在處在整體進程的哪一步？
+5. 距離理想狀態、完整落地或真正解決問題，還差什麼？
+
+你可以依新聞性質選擇最適合的圖表切法，例如：
+- 技術演進：現況 → 本次進展 → 下一步 → 理想狀態
+- 政策監理：改變前 / 改變後 + 各機關角色
+- 支付與清算：資金流或清算流程
+- 多方合作：各參與方負責什麼
+- 資安事件：攻擊打到哪一層、防線還剩什麼
+- DeFi 事故：漏洞 → 風險 → 止血 → 賠償 / 後續責任
+- 傳統金融採用加密資產：舊框架如何接上新資產
+
+請直接產出圖表。圖表應包含：
+- 一個清楚標題
+- 一句話說明這則新聞的核心意義
+- 3–5 個主要節點或模組
+- 每個節點用短句說明，不要塞長段文字
+- 最後給一個「讀者該記住的重點」
+
+如果資料不足，請標示「尚未確定」或「仍待觀察」，不要自行補數字或推論。
+
+新聞資料如下：
+
+【標題】
+${title}
+
+【標籤】
+${tags}
+
+【摘要】
+${summaryText}
+
+【來源】
+${sourcesText || '未提供來源'}
+
+【社群討論 / 補充觀點】
+${discussionsText || '未提供'}
+
+【建議聚焦】
+${preferredAngle}`;
+}
+
+function sourcesToPromptText(sources){
+  return (sources || []).map(s => {
+    if(!s) return '';
+    const name = (s.name || '來源').replace(/\s*[（(][^()（）]*[)）]\s*$/,'').trim() || '來源';
+    return s.url ? `${name}：${s.url}` : name;
+  }).filter(Boolean).join('\n');
+}
+
+function discussionsToPromptText(raw){
+  if(Array.isArray(raw)){
+    return raw.map(d => {
+      if(!d) return '';
+      if(typeof d === 'string') return '- ' + htmlToPlainPreservingLinks(d);
+      const author = d.author || d.name || d.source || '社群來源';
+      const text = d.text || d.content || d.summary || d.quote || '';
+      const url = d.url ? `（${d.url}）` : '';
+      return `- ${author}${url}：${htmlToPlainPreservingLinks(String(text))}`;
+    }).filter(Boolean).join('\n');
+  }
+  const lis = getDiscussionLis(raw || '');
+  return lis.map(li => '- ' + htmlToPlainPreservingLinks(li)).join('\n');
+}
+
+function inferPreferredAngle(item){
+  const text = [
+    item.title || '',
+    (item.tags || []).join(' '),
+    stripHtml(item.summary || '')
+  ].join(' ').toLowerCase();
+
+  if(/量子|quantum|xmss|bls|驗證者|validator|協議|protocol|eip|fork|升級|upgrade/.test(text)){
+    return '這項技術遷移目前走到哪一步，下一步還差什麼';
+  }
+  if(/fed|fdic|occ|監理|法規|regulat|reputation risk|聲譽風險|銀行監理|政策|guidance|bulletin/.test(text)){
+    return '政策改變前後的差異，以及各機關分別改變了什麼';
+  }
+  if(/trezor|ledger|漏洞|vulnerab|attack|攻擊|安全|晶片|chip|pin|hardware wallet|錢包/.test(text)){
+    return '攻擊打到哪一層防線，還有哪些防線仍然有效';
+  }
+  if(/gnosis|defi|bridge|跨鏈橋|模組|module|exploit|賠償|compensat|盜|hack/.test(text)){
+    return '漏洞如何造成風險，團隊如何止血，後續責任是什麼';
+  }
+  if(/mastercard|visa|moneygram|stablecoin|穩定幣|清算|結算|settlement|支付|匯款|remittance|stellar|usdc|rlusd|mgusd/.test(text)){
+    return '新的資金流或清算流程和舊流程差在哪裡';
+  }
+  if(/房貸|抵押|mortgage|貸款|loan|fannie mae|coinbase|better|btc|bitcoin/.test(text)){
+    return '傳統金融框架如何容納加密資產，以及還有哪些限制';
+  }
+  if(/合作|partner|launch|推出|公司|銀行|bank|chain|鏈/.test(text)){
+    return '各參與方在這個事件裡分別負責哪一段';
+  }
+  return '這則新聞改變了什麼、涉及哪些角色，以及後續還差什麼';
 }
 
 // ---------- Generate ----------
