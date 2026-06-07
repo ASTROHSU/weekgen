@@ -473,58 +473,19 @@ function summaryToParagraphs(html){
 // ---------- Per-story Claude chart prompt ----------
 function buildChartPrompt(item){
   const title = item.title || '未命名新聞';
-  const tags = (item.tags || []).join('、') || '未標示';
   const summaryText = summaryToParagraphs(item.summary || '').join('\n\n') || '未提供摘要';
-  const sourcesText = sourcesToPromptText(item.sources || []);
-  const discussionsText = discussionsToPromptText(item.discussions);
   const preferredAngle = inferPreferredAngle(item);
 
-  return `請根據以下新聞，製作一張幫助讀者理解事件意義的圖表。
+  return `請用內建圖表工具，替這則新聞做一張簡單靜態圖表。
 
-請先判斷這則新聞最適合用哪一種資訊結構來解釋，不要只重述新聞內容。目標是讓讀者看懂：
-1. 這件事發生前，原本的狀態是什麼？
-2. 這次新聞真正改變了什麼？
-3. 牽涉哪些關鍵角色、技術層、制度或資金流？
-4. 現在處在整體進程的哪一步？
-5. 距離理想狀態、完整落地或真正解決問題，還差什麼？
+只要 3–5 個節點，說明「原本狀態 → 這次改變 → 接下來還差什麼」。
+不要做互動，也不要把內容做得太複雜。
 
-你可以依新聞性質選擇最適合的圖表切法，例如：
-- 技術演進：現況 → 本次進展 → 下一步 → 理想狀態
-- 政策監理：改變前 / 改變後 + 各機關角色
-- 支付與清算：資金流或清算流程
-- 多方合作：各參與方負責什麼
-- 資安事件：攻擊打到哪一層、防線還剩什麼
-- DeFi 事故：漏洞 → 風險 → 止血 → 賠償 / 後續責任
-- 傳統金融採用加密資產：舊框架如何接上新資產
+標題：${title}
 
-請直接產出圖表。圖表應包含：
-- 一個清楚標題
-- 一句話說明這則新聞的核心意義
-- 3–5 個主要節點或模組
-- 每個節點用短句說明，不要塞長段文字
-- 最後給一個「讀者該記住的重點」
+摘要：${summaryText}
 
-如果資料不足，請標示「尚未確定」或「仍待觀察」，不要自行補數字或推論。
-
-新聞資料如下：
-
-【標題】
-${title}
-
-【標籤】
-${tags}
-
-【摘要】
-${summaryText}
-
-【來源】
-${sourcesText || '未提供來源'}
-
-【社群討論 / 補充觀點】
-${discussionsText || '未提供'}
-
-【建議聚焦】
-${preferredAngle}`;
+建議切角：${preferredAngle}`;
 }
 
 function sourcesToPromptText(sources){
