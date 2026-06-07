@@ -385,6 +385,16 @@ function stripHtml(html){
   return (tmp.textContent || '').replace(/\s+/g,' ').trim();
 }
 
+function cleanTitle(title){
+  // Output titles should be plain text: no raw URLs and no Markdown-link URL payloads.
+  return String(title || '未命名新聞')
+    .replace(/\[([^\]]+)\]\((?:https?:\/\/|www\.)[^)]+\)/gi, '$1')
+    .replace(/\s*[（(]\s*(?:https?:\/\/|www\.)[^)）\s]+\s*[)）]\s*/gi, ' ')
+    .replace(/(?:https?:\/\/|www\.)\S+/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim() || '未命名新聞';
+}
+
 function toggleSelect(id, checked, rowEl){
   if(checked) state.selectedIds.add(id);
   else state.selectedIds.delete(id);
@@ -472,7 +482,7 @@ function summaryToParagraphs(html){
 
 // ---------- Per-story Claude chart prompt ----------
 function buildChartPrompt(item){
-  const title = item.title || '未命名新聞';
+  const title = cleanTitle(item.title);
   const summaryText = summaryToParagraphs(item.summary || '').join('\n\n') || '未提供摘要';
   const preferredAngle = inferPreferredAngle(item);
 
@@ -568,7 +578,7 @@ function buildWeeklyHtml(items){
 <section class="toc">
   <h2>本期內容</h2>
   <ul>
-${items.map((it, i) => `    <li><a href="#story-${i+1}">${escHtml(it.title)}</a></li>`).join('\n')}
+${items.map((it, i) => `    <li><a href="#story-${i+1}">${escHtml(cleanTitle(it.title))}</a></li>`).join('\n')}
   </ul>
 </section>`;
 
@@ -590,13 +600,11 @@ ${items.map((it, i) => `    <li><a href="#story-${i+1}">${escHtml(it.title)}</a>
       ? `  <ul class="discussions">\n${lis.map(li => `    <li>${li}</li>`).join('\n')}\n  </ul>`
       : '';
 
-    const titleA = it.url
-      ? `<a href="${escHtml(it.url)}" target="_blank" rel="noopener">${escHtml(it.title)}</a>`
-      : escHtml(it.title);
+    const titleText = escHtml(cleanTitle(it.title));
 
     return `
 <article class="story" id="story-${i+1}">
-  <h2>${titleA}</h2>
+  <h2>${titleText}</h2>
 ${[sourcesP, summaryHtml, discHtml].filter(Boolean).join('\n')}
 </article>`;
   }).join('\n<hr class="story-divider">\n');
@@ -687,13 +695,13 @@ function buildWeeklyMarkdown(items){
   lines.push('');
   lines.push('## 本期內容');
   lines.push('');
-  items.forEach(it => lines.push(`* ${it.title}`));
+  items.forEach(it => lines.push(`* ${cleanTitle(it.title)}`));
   lines.push('');
 
   items.forEach(it => {
     lines.push('---');
     lines.push('');
-    lines.push(`## ${it.title}`);
+    lines.push(`## ${cleanTitle(it.title)}`);
     lines.push('');
     const sources = (it.sources || []).map(s => {
       const nm = (s.name || '').replace(/\s*[（(][^()（）]*[)）]\s*$/,'').trim();
