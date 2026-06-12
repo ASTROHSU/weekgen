@@ -395,53 +395,6 @@ function cleanTitle(title){
     .trim() || '未命名新聞';
 }
 
-function shortTocTitle(title){
-  const full = cleanTitle(title);
-  // The TOC is a one-glance scan list. Keep full headlines in each story section;
-  // here reduce to brand / institution + the main object or action.
-  const ruleBased = compactHeadline(full);
-  if(ruleBased) return truncateByChars(ruleBased, 16);
-
-  const primary = full
-    .split(/[：:]/)[0]
-    .split(/[，,；;。、]/)[0]
-    .replace(/\s+/g, ' ')
-    .trim();
-  const candidate = primary || full;
-  return truncateByChars(candidate, 16);
-}
-
-function compactHeadline(title){
-  const s = String(title || '').replace(/\s+/g, ' ').trim();
-  if(/司法部/.test(s) && /去銀行化/.test(s)) return '司法部查去銀行化';
-  if(/CFTC/.test(s) && /預測市場規則/.test(s)) return 'CFTC 預測市場規則';
-
-  let m = s.match(/^([A-Za-z0-9][A-Za-z0-9 .&-]{1,24}).*AI\s*代理/);
-  if(m) return `${m[1].trim()} AI 代理`;
-
-  m = s.match(/^([A-Za-z0-9][A-Za-z0-9 .&-]{1,24})\s+上線\s+([A-Za-z0-9][A-Za-z0-9 .&-]{1,18})/);
-  if(m) return `${m[1].trim()} ${m[2].trim()}`;
-
-  m = s.match(/^([A-Za-z0-9][A-Za-z0-9 .&-]{1,24})\s+開放\s+([^：:，,；;。、]{1,8})/);
-  if(m) return `${m[1].trim()} ${m[2].trim()}`;
-
-  m = s.match(/^([A-Za-z0-9][A-Za-z0-9 .&-]{1,24})\s+募\s*[\d.]+\s*億/);
-  if(m) return `${m[1].trim()} 募資`;
-
-  m = s.match(/^([^：:，,；;。、]{2,12})\s*(?:通過|推出|上線|開放|關閉|傳喚|調查|領投|募資)/);
-  if(m) return m[0].trim();
-
-  return '';
-}
-
-function truncateByChars(text, maxChars){
-  const chars = Array.from(String(text || '').trim());
-  if(chars.length <= maxChars) return chars.join('');
-  let cut = chars.slice(0, Math.max(1, maxChars - 1)).join('');
-  cut = cut.replace(/[A-Za-z0-9.&-]+$/,'').replace(/[，,；;：:\-—–\s]+$/,'');
-  return (cut || chars.slice(0, Math.max(1, maxChars - 1)).join('')).trim() + '…';
-}
-
 function toggleSelect(id, checked, rowEl){
   if(checked) state.selectedIds.add(id);
   else state.selectedIds.delete(id);
@@ -625,7 +578,7 @@ function buildWeeklyHtml(items){
 <section class="toc">
   <h2>本期內容</h2>
   <ul>
-${items.map((it, i) => `    <li><a href="#story-${i+1}">${escHtml(shortTocTitle(it.title))}</a></li>`).join('\n')}
+${items.map((it, i) => `    <li><a href="#story-${i+1}">${escHtml(cleanTitle(it.title))}</a></li>`).join('\n')}
   </ul>
 </section>`;
 
@@ -742,7 +695,7 @@ function buildWeeklyMarkdown(items){
   lines.push('');
   lines.push('## 本期內容');
   lines.push('');
-  items.forEach(it => lines.push(`* ${shortTocTitle(it.title)}`));
+  items.forEach(it => lines.push(`* ${cleanTitle(it.title)}`));
   lines.push('');
 
   items.forEach(it => {
